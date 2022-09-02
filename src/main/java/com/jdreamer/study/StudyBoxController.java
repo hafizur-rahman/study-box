@@ -200,7 +200,7 @@ public class StudyBoxController {
 
         mediaPlayer.setOnPaused(new Runnable() {
             public void run() {
-                System.out.println("onPaused");
+                //System.out.println("onPaused");
                 playButton.setText(">");
             }
         });
