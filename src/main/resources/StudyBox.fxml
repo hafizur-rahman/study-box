@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.media.MediaView?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.jdreamer.study.StudyBoxController"
+            prefHeight="780.0" prefWidth="1200.0">
+    <left>
+        <TreeView fx:id="studyItemsTree"/>
+    </left>
+    <center>
+        <BorderPane>
+            <top>
+                <HBox alignment="CENTER">
+                    <Label alignment="CENTER_RIGHT" text="Learning for pleasure!" visible="false"/>
+                </HBox>
+            </top>
+            <center>
+                <MediaView fx:id="mediaView" style="-fx-background-color: black;" />
+            </center>
+            <bottom>
+                <HBox alignment="CENTER">
+                    <Label text="  " />
+                    <Button fx:id="playButton" text=">" />
+                    <Label text="  " />
+                    <Label text="Time: " />
+                    <Slider fx:id="timeSlider" minWidth="50" />
+                    <Label fx:id="playTime" text="0:00/0:00" prefWidth="130" minWidth="50" />
+
+                    <Label text="Vol: " />
+                    <Slider fx:id="volumeSlider" prefWidth="70" minWidth="30" />
+                    <Label text="  " />
+                </HBox>
+            </bottom>
+        </BorderPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER">
+            <Label alignment="CENTER" text=" "/>
+        </HBox>
+    </bottom>
+</BorderPane>
