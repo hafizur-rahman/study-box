@@ -20,10 +20,9 @@ public class StudyBox extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader();
-        // Path to the FXML File
-        String fxmlDocPath = "C:\\dev\\media-player\\src\\main\\resources\\StudyBox.fxml";
-        FileInputStream fxmlStream = new FileInputStream(fxmlDocPath);
-        BorderPane root = (BorderPane) loader.load(fxmlStream);
+
+        BorderPane root = (BorderPane) loader.load(
+                getClass().getClassLoader().getResourceAsStream("StudyBox.fxml"));
 
         Scene scene = new Scene(root);
 
