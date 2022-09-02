@@ -7,6 +7,7 @@ import com.github.kiulian.downloader.downloader.response.Response;
 import com.github.kiulian.downloader.model.Filter;
 import com.github.kiulian.downloader.model.videos.VideoInfo;
 import com.github.kiulian.downloader.model.videos.formats.Format;
+import com.github.kiulian.downloader.model.videos.formats.VideoFormat;
 import com.github.kiulian.downloader.model.videos.formats.VideoWithAudioFormat;
 import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
 import com.opencsv.CSVParser;
@@ -150,10 +151,15 @@ public class StudyBoxController {
                 Response<VideoInfo> response = downloader.getVideoInfo(request);
                 VideoInfo video = response.data(); // will block thread
 
-                Optional<VideoWithAudioFormat> medium = video.videoWithAudioFormats().stream()
-                        .filter(format -> format.videoQuality() == VideoQuality.hd720).findFirst();
-                if (medium.isPresent()) {
-                    String url = medium.get().url();
+                Optional<VideoFormat> videoFormat = null;
+                if (video.bestVideoFormat().width() > 720) {
+                    videoFormat = video.videoFormats().stream()
+                            .filter(format -> format.videoQuality() == VideoQuality.hd720).findFirst();
+                } else {
+                    videoFormat = Optional.of(video.bestVideoWithAudioFormat());
+                }
+                if (videoFormat.isPresent()) {
+                    String url = videoFormat.get().url();
 
                     boolean isDisposed = false;
                     if (mediaPlayer != null && mediaPlayer.getMedia().getSource().compareTo(url) != 0) {
