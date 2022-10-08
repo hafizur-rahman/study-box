@@ -1,49 +1,45 @@
 package com.jdreamer.studybox.model;
 
+import javafx.beans.property.SimpleStringProperty;
+
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name="STUDY_ITEM")
+@Table(name = "STUDY_ITEM")
 @NamedQuery(
-        name="findAllStudyItems",
-        query="SELECT s FROM StudyItem s"
+        name = "findAllStudyItems",
+        query = "SELECT s FROM StudyItem s"
 )
 public class StudyItem implements Serializable {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(name = "CATEGORY", nullable = false)
-    private String category;
+    private SimpleStringProperty category = new SimpleStringProperty();
 
-    @Column(name = "TITLE", nullable = false)
-    private String title;
+    private SimpleStringProperty title = new SimpleStringProperty();
 
-    @Column(name = "MEDIA_LOCATION", nullable = false)
-    private String mediaLocation;
+    private SimpleStringProperty mediaLocation = new SimpleStringProperty();
 
-    @Column(name = "LOCAL_MEDIA_LOCATION", nullable = true)
-    private String localMediaLocation;
+    private SimpleStringProperty localMediaLocation = new SimpleStringProperty();
 
-    @Column(name = "IS_VIEWED", nullable = false)
     private boolean isViewed;
 
     public StudyItem() {
     }
 
     public StudyItem(String title) {
-        this.title = title;
+        this.title.set(title);
     }
 
     public StudyItem(String category, String title, String mediaLocation) {
-        this.category = category;
-        this.title = title;
-        this.mediaLocation = mediaLocation;
+        this.category.set(category);
+        this.title.set(title);
+        this.mediaLocation.set(mediaLocation);
     }
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     public Long getId() {
         return id;
     }
@@ -52,38 +48,44 @@ public class StudyItem implements Serializable {
         this.id = id;
     }
 
+    @Column(name = "CATEGORY", nullable = false)
     public String getCategory() {
-        return category;
+        return category.get();
     }
 
     public void setCategory(String category) {
-        this.category = category;
+        this.category.set(category);
     }
 
+    @Column(name = "TITLE", nullable = false)
     public String getTitle() {
-        return title;
+        return title.get();
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        this.title.set(title);
     }
 
+    @Column(name = "MEDIA_LOCATION", nullable = false)
     public String getMediaLocation() {
-        return mediaLocation;
+        return mediaLocation.get();
     }
 
     public void setMediaLocation(String mediaLocation) {
-        this.mediaLocation = mediaLocation;
+        this.mediaLocation.set(mediaLocation);
     }
 
+
+    @Column(name = "LOCAL_MEDIA_LOCATION", nullable = true)
     public String getLocalMediaLocation() {
-        return localMediaLocation;
+        return localMediaLocation.get();
     }
 
     public void setLocalMediaLocation(String localMediaLocation) {
-        this.localMediaLocation = localMediaLocation;
+        this.localMediaLocation.set(localMediaLocation);
     }
 
+    @Column(name = "IS_VIEWED", nullable = false)
     public boolean isViewed() {
         return isViewed;
     }
@@ -109,6 +111,6 @@ public class StudyItem implements Serializable {
 
     @Override
     public String toString() {
-        return title;
+        return title.get();
     }
 }

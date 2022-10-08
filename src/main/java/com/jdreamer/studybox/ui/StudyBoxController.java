@@ -86,7 +86,10 @@ public class StudyBoxController {
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
 
-    private StudyItem currentStudyItem;
+    private TreeItem currentTreeItem;
+
+    private Image checkedIcon;
+    private Image uncheckedIcon;
 
     public StudyBoxController() {
         this.studyItems = loadStudyItems();
@@ -94,16 +97,23 @@ public class StudyBoxController {
 
     @FXML
     public void initialize() {
+        checkedIcon = new Image(getClass().getClassLoader().getResourceAsStream("checked.png"));
+        uncheckedIcon = new Image(getClass().getClassLoader().getResourceAsStream("unchecked.png"));
+
         studyItemsTree.setRoot(createNodes(this.studyItems));
         studyItemsTree.addEventHandler(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
         studyItemsTree.setShowRoot(false);
 
         updateStudyItem.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent e) {
+                StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
+
                 currentStudyItem.setTitle(studyItemTitle.getText());
                 currentStudyItem.setViewed(toggleIsViewed.isSelected());
 
                 saveUpdatedStudyItem(currentStudyItem);
+
+                currentTreeItem.setGraphic(new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon));
             }
         });
 
@@ -164,10 +174,11 @@ public class StudyBoxController {
             if (selectedItem != null && selectedItem.getValue() instanceof StudyItem) {
                 StudyItem studyItem = (StudyItem) selectedItem.getValue();
 
-                if (studyItem.getMediaLocation() != null) {
-                    if (currentStudyItem == null || !studyItem.getMediaLocation().equals(currentStudyItem.getMediaLocation())) {
-                        currentStudyItem = studyItem;
-                    }
+                if (studyItem.getMediaLocation() != null && (currentTreeItem == null || !studyItem.getMediaLocation().equals(
+                            ((StudyItem) currentTreeItem.getValue()).getMediaLocation()))) {
+                    currentTreeItem = selectedItem;
+
+                    StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
 
                     studyItemCategory.setText(currentStudyItem.getCategory());
                     studyItemTitle.setText(currentStudyItem.getTitle());
@@ -282,8 +293,7 @@ public class StudyBoxController {
     }
 
     private TreeItem<StudyItem> createNodes(List<StudyItem> studyItemList) {
-        final Image checkedIcon = new Image(getClass().getClassLoader().getResourceAsStream("checked.png"));
-        final Image uncheckedIcon = new Image(getClass().getClassLoader().getResourceAsStream("unchecked.png"));
+
 
         TreeItem<StudyItem> top = new TreeItem<StudyItem>(new StudyItem("My Study Items"));
 
@@ -299,7 +309,7 @@ public class StudyBoxController {
 
             for (StudyItem item : groupedStudyItem.get(key)) {
                 category.getChildren().add(new TreeItem<StudyItem>(item,
-                        new ImageView(item.isViewed() ? checkedIcon : uncheckedIcon)));
+                        new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon)));
             }
         }
 
@@ -323,7 +333,7 @@ public class StudyBoxController {
         EntityManager em = emf.createEntityManager();
 
         em.getTransaction().begin();
-        for (StudyItem item: studyItems) {
+        for (StudyItem item : studyItems) {
             em.persist(item);
         }
         em.getTransaction().commit();
