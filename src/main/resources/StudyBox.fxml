@@ -26,7 +26,7 @@
                     <Label text="  Title: ">
                         <font><Font name="Arial Black" size="10.0" /></font>
                     </Label>
-                    <TextField fx:id="studyItemTitle" minWidth="450" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;">
+                    <TextField fx:id="studyItemTitle" editable="false" minWidth="450" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;">
                         <font><Font name="Arial Black" size="10.0" /></font>
                     </TextField>
                     <Label text="  " />

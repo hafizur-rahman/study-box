@@ -106,14 +106,16 @@ public class StudyBoxController {
 
         updateStudyItem.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent e) {
-                StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
+                if (currentTreeItem != null) {
+                    StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
 
-                currentStudyItem.setTitle(studyItemTitle.getText());
-                currentStudyItem.setViewed(toggleIsViewed.isSelected());
+                    currentStudyItem.setTitle(studyItemTitle.getText());
+                    currentStudyItem.setViewed(toggleIsViewed.isSelected());
 
-                saveUpdatedStudyItem(currentStudyItem);
+                    saveUpdatedStudyItem(currentStudyItem);
 
-                currentTreeItem.setGraphic(new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon));
+                    currentTreeItem.setGraphic(new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon));
+                }
             }
         });
 
@@ -183,6 +185,8 @@ public class StudyBoxController {
                     studyItemCategory.setText(currentStudyItem.getCategory());
                     studyItemTitle.setText(currentStudyItem.getTitle());
                     toggleIsViewed.setSelected(currentStudyItem.isViewed());
+
+                    studyItemTitle.setEditable(true);
 
                     String videoId = studyItem.getMediaLocation().replace(YOUTUBE_VIDEO_URL_PREFIX, "");
 
