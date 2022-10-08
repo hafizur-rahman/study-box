@@ -5,6 +5,7 @@
 
 <?import javafx.scene.media.MediaView?>
 
+<?import javafx.scene.text.Font?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.jdreamer.studybox.ui.StudyBoxController"
@@ -16,14 +17,24 @@
         <BorderPane>
             <top>
                 <HBox alignment="CENTER">
-                    <Label text="Category: "/>
-                    <TextField fx:id="studyItemCategory" editable="false" minWidth="200" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;"/>
-                    <Label text="  Title: "/>
-                    <TextField fx:id="studyItemTitle" minWidth="400" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;"/>
+                    <Label text="Category: ">
+                        <font><Font name="Arial Black" size="10.0" /></font>
+                    </Label>
+                    <TextField fx:id="studyItemCategory" editable="false" minWidth="300" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;">
+                        <font><Font name="Arial Black" size="10.0" /></font>
+                    </TextField>
+                    <Label text="  Title: ">
+                        <font><Font name="Arial Black" size="10.0" /></font>
+                    </Label>
+                    <TextField fx:id="studyItemTitle" minWidth="450" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;">
+                        <font><Font name="Arial Black" size="10.0" /></font>
+                    </TextField>
                     <Label text="  " />
                     <CheckBox fx:id="toggleIsViewed" />
                     <Label text="  " />
-                    <Button fx:id="updateStudyItem" text="Save" />
+                    <Button fx:id="updateStudyItem" text="Save">
+                        <font><Font name="Arial Black" size="12.0" /></font>
+                    </Button>
                 </HBox>
             </top>
             <center>
