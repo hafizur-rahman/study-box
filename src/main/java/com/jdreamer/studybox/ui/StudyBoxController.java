@@ -1,15 +1,14 @@
-package com.jdreamer.study;
+package com.jdreamer.studybox.ui;
 
 import com.github.kiulian.downloader.YoutubeDownloader;
-import com.github.kiulian.downloader.downloader.YoutubeCallback;
 import com.github.kiulian.downloader.downloader.request.RequestVideoInfo;
 import com.github.kiulian.downloader.downloader.response.Response;
-import com.github.kiulian.downloader.model.Filter;
 import com.github.kiulian.downloader.model.videos.VideoInfo;
-import com.github.kiulian.downloader.model.videos.formats.Format;
 import com.github.kiulian.downloader.model.videos.formats.VideoFormat;
-import com.github.kiulian.downloader.model.videos.formats.VideoWithAudioFormat;
 import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
+import com.jdreamer.studybox.dao.StudyItemRepository;
+import com.jdreamer.studybox.dao.StudyItemRepositoryImpl;
+import com.jdreamer.studybox.model.StudyItem;
 import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
@@ -22,6 +21,8 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -32,6 +33,9 @@ import javafx.scene.text.Text;
 import javafx.util.Duration;
 import org.apache.commons.io.IOUtils;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -41,8 +45,19 @@ import java.util.*;
 import static java.util.stream.Collectors.groupingBy;
 
 public class StudyBoxController {
+    private static final String YOUTUBE_VIDEO_URL_PREFIX = "https://www.youtube.com/watch?v=";
+
     @FXML
     private TreeView studyItemsTree;
+
+    @FXML
+    private TextField studyItemCategory;
+
+    @FXML
+    private TextField studyItemTitle;
+
+    @FXML
+    private CheckBox toggleIsViewed;
 
     @FXML
     private MediaView mediaView;
@@ -59,6 +74,9 @@ public class StudyBoxController {
     @FXML
     private Button playButton;
 
+    @FXML
+    private Button updateStudyItem;
+
     private MediaPlayer mediaPlayer;
 
     private List<StudyItem> studyItems;
@@ -68,6 +86,8 @@ public class StudyBoxController {
     private boolean stopRequested = false;
     private boolean atEndOfMedia = false;
 
+    private StudyItem currentStudyItem;
+
     public StudyBoxController() {
         this.studyItems = loadStudyItems();
     }
@@ -75,13 +95,17 @@ public class StudyBoxController {
     @FXML
     public void initialize() {
         studyItemsTree.setRoot(createNodes(this.studyItems));
-
-        EventHandler<MouseEvent> mouseEventHandle = (MouseEvent event) -> {
-            handleMouseClicked(event);
-        };
-
-        studyItemsTree.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventHandle);
+        studyItemsTree.addEventHandler(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
         studyItemsTree.setShowRoot(false);
+
+        updateStudyItem.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent e) {
+                currentStudyItem.setTitle(studyItemTitle.getText());
+                currentStudyItem.setViewed(toggleIsViewed.isSelected());
+
+                saveUpdatedStudyItem(currentStudyItem);
+            }
+        });
 
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
 
@@ -139,36 +163,40 @@ public class StudyBoxController {
 
             if (selectedItem != null && selectedItem.getValue() instanceof StudyItem) {
                 StudyItem studyItem = (StudyItem) selectedItem.getValue();
-                //System.out.println("Node click: " + studyItem.getMediaLocation());
 
-                String videoId = studyItem.getMediaLocation().replace("https://www.youtube.com/watch?v=", "");
-
-                // Parse the streaming url
-                YoutubeDownloader downloader = new YoutubeDownloader();
-
-                // async parsing
-                RequestVideoInfo request = new RequestVideoInfo(videoId).async();
-                Response<VideoInfo> response = downloader.getVideoInfo(request);
-                VideoInfo video = response.data(); // will block thread
-
-                Optional<VideoFormat> videoFormat = null;
-                if (video.bestVideoFormat().width() >= 720) {
-                    videoFormat = video.videoFormats().stream()
-                            .filter(format -> format.videoQuality() == VideoQuality.hd720).findFirst();
-                } else {
-                    videoFormat = Optional.of(video.bestVideoWithAudioFormat());
-                }
-                if (videoFormat.isPresent()) {
-                    String url = videoFormat.get().url();
-
-                    boolean isDisposed = false;
-                    if (mediaPlayer != null && mediaPlayer.getMedia().getSource().compareTo(url) != 0) {
-                        mediaPlayer.dispose();
-
-                        isDisposed = true;
+                if (studyItem.getMediaLocation() != null) {
+                    if (currentStudyItem == null || !studyItem.getMediaLocation().equals(currentStudyItem.getMediaLocation())) {
+                        currentStudyItem = studyItem;
                     }
 
-                    if (isDisposed || mediaPlayer ==null) {
+                    studyItemCategory.setText(currentStudyItem.getCategory());
+                    studyItemTitle.setText(currentStudyItem.getTitle());
+                    toggleIsViewed.setSelected(currentStudyItem.isViewed());
+
+                    String videoId = studyItem.getMediaLocation().replace(YOUTUBE_VIDEO_URL_PREFIX, "");
+
+                    // Parse the streaming url
+                    YoutubeDownloader downloader = new YoutubeDownloader();
+
+                    // async parsing
+                    RequestVideoInfo request = new RequestVideoInfo(videoId).async();
+                    Response<VideoInfo> response = downloader.getVideoInfo(request);
+                    VideoInfo video = response.data(); // will block thread
+
+                    Optional<VideoFormat> videoFormat = null;
+                    if (video.bestVideoFormat().width() >= 720) {
+                        videoFormat = video.videoFormats().stream()
+                                .filter(format -> format.videoQuality() == VideoQuality.hd720).findFirst();
+                    } else {
+                        videoFormat = Optional.of(video.bestVideoWithAudioFormat());
+                    }
+                    if (videoFormat.isPresent()) {
+                        String url = videoFormat.get().url();
+
+                        if (mediaPlayer != null) {
+                            mediaPlayer.dispose();
+                        }
+
                         mediaPlayer = prepareMediaPlayer(url);
                     }
                 }
@@ -253,8 +281,11 @@ public class StudyBoxController {
         }
     }
 
-    private TreeItem createNodes(List<StudyItem> studyItemList) {
-        TreeItem top = new TreeItem("My Study Items");
+    private TreeItem<StudyItem> createNodes(List<StudyItem> studyItemList) {
+        final Image checkedIcon = new Image(getClass().getClassLoader().getResourceAsStream("checked.png"));
+        final Image uncheckedIcon = new Image(getClass().getClassLoader().getResourceAsStream("unchecked.png"));
+
+        TreeItem<StudyItem> top = new TreeItem<StudyItem>(new StudyItem("My Study Items"));
 
         Map<String, List<StudyItem>> groupedStudyItem = studyItemList.stream().collect(groupingBy(StudyItem::getCategory));
         //System.out.println(groupedStudyItem.keySet());
@@ -262,12 +293,13 @@ public class StudyBoxController {
         ArrayList<String> categories = new ArrayList<String>(groupedStudyItem.keySet());
         Collections.sort(categories);
 
-        for (String key: categories) {
-            TreeItem category = new TreeItem(key);
+        for (String key : categories) {
+            TreeItem<StudyItem> category = new TreeItem<StudyItem>(new StudyItem(key));
             top.getChildren().add(category);
 
-            for (StudyItem item: groupedStudyItem.get(key)) {
-                category.getChildren().add(new TreeItem<StudyItem>(item));
+            for (StudyItem item : groupedStudyItem.get(key)) {
+                category.getChildren().add(new TreeItem<StudyItem>(item,
+                        new ImageView(item.isViewed() ? checkedIcon : uncheckedIcon)));
             }
         }
 
@@ -275,47 +307,32 @@ public class StudyBoxController {
     }
 
     private List<StudyItem> loadStudyItems() {
-        List<StudyItem> list = new ArrayList<StudyItem>();
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("StudyBox");
+        EntityManager em = emf.createEntityManager();
 
-        String studyItemsFile = System.getProperty("study.items.file", "classpath:study-items.csv");
-        System.out.println(studyItemsFile);
+        StudyItemRepository repo = new StudyItemRepositoryImpl(em);
+        List<StudyItem> studyItems = repo.findAll();
 
-        Reader filereader = null;
-        try {
-            if (studyItemsFile.startsWith("classpath:")) {
-                studyItemsFile = studyItemsFile.replace("classpath:", "");
+        em.close();
+        emf.close();
 
-                filereader = new InputStreamReader(
-                        getClass().getClassLoader().getResourceAsStream(studyItemsFile));
-            } else {
-                filereader = new InputStreamReader(new FileInputStream(studyItemsFile));
-            }
+        return studyItems;
+    }
 
-            CSVParser parser = new CSVParserBuilder().withSeparator(',').build();
-            CSVReader csvReader = new CSVReaderBuilder(filereader)
-                    .withCSVParser(parser)
-                    .build();
+    private StudyItem saveUpdatedStudyItem(StudyItem item) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("StudyBox");
+        EntityManager em = emf.createEntityManager();
 
-            List<String[]> allData = csvReader.readAll();
+        StudyItemRepository repo = new StudyItemRepositoryImpl(em);
 
-            for (String[] row : allData) {
-                StudyItem item = new StudyItem(row[0], row[1], row[2]);
-                if (row.length > 3) {
-                    item.setLocalMediaLocation(row[3]);
-                }
-                list.add(item);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                IOUtils.close(filereader);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        em.getTransaction().begin();
+        StudyItem result = repo.merge(item);
+        em.getTransaction().commit();
 
-        return list;
+        em.close();
+        emf.close();
+
+        return result;
     }
 
     private static String formatTime(Duration elapsed, Duration duration) {

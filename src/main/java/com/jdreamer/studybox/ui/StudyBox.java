@@ -1,4 +1,4 @@
-package com.jdreamer.study;
+package com.jdreamer.studybox.ui;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;

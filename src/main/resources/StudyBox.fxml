@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.media.MediaView?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.jdreamer.study.StudyBoxController"
+            fx:controller="com.jdreamer.studybox.ui.StudyBoxController"
             prefHeight="780.0" prefWidth="1200.0">
     <left>
         <TreeView fx:id="studyItemsTree"/>
@@ -20,7 +16,14 @@
         <BorderPane>
             <top>
                 <HBox alignment="CENTER">
-                    <Label alignment="CENTER_RIGHT" text="Learning for pleasure!" visible="false"/>
+                    <Label text="Category: "/>
+                    <TextField fx:id="studyItemCategory" editable="false" minWidth="200" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;"/>
+                    <Label text="  Title: "/>
+                    <TextField fx:id="studyItemTitle" minWidth="400" style="-fx-text-box-border: #B22222; -fx-focus-color: #B22222;"/>
+                    <Label text="  " />
+                    <CheckBox fx:id="toggleIsViewed" />
+                    <Label text="  " />
+                    <Button fx:id="updateStudyItem" text="Save" />
                 </HBox>
             </top>
             <center>
