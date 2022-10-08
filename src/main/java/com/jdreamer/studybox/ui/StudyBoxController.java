@@ -307,6 +307,77 @@ public class StudyBoxController {
     }
 
     private List<StudyItem> loadStudyItems() {
+        List<StudyItem> studyItems = loadStudyItemsFromDb();
+        if (studyItems.isEmpty()) {
+            studyItems = loadStudyItemsFromFile();
+
+            persistStudyItems(studyItems);
+        }
+
+        return studyItems;
+    }
+
+    private void persistStudyItems(List<StudyItem> studyItems) {
+        // Create our entity manager
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("StudyBox");
+        EntityManager em = emf.createEntityManager();
+
+        em.getTransaction().begin();
+        for (StudyItem item: studyItems) {
+            em.persist(item);
+        }
+        em.getTransaction().commit();
+
+        // Close the entity manager and associated factory
+        em.close();
+        emf.close();
+    }
+
+    private List<StudyItem> loadStudyItemsFromFile() {
+        List<StudyItem> list = new ArrayList<StudyItem>();
+
+        String studyItemsFile = System.getProperty("study.items.file", "classpath:study-items.csv");
+        System.out.println(studyItemsFile);
+
+        Reader filereader = null;
+        try {
+            if (studyItemsFile.startsWith("classpath:")) {
+                studyItemsFile = studyItemsFile.replace("classpath:", "");
+
+                filereader = new InputStreamReader(
+                        getClass().getClassLoader().getResourceAsStream(studyItemsFile));
+            } else {
+                filereader = new InputStreamReader(new FileInputStream(studyItemsFile));
+            }
+
+            CSVParser parser = new CSVParserBuilder().withSeparator(',').build();
+            CSVReader csvReader = new CSVReaderBuilder(filereader)
+                    .withCSVParser(parser)
+                    .build();
+
+            List<String[]> allData = csvReader.readAll();
+
+            for (String[] row : allData) {
+                StudyItem item = new StudyItem(row[0], row[1], row[2]);
+                if (row.length > 3) {
+                    item.setLocalMediaLocation(row[3]);
+                }
+                list.add(item);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                IOUtils.close(filereader);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return list;
+    }
+
+    private List<StudyItem> loadStudyItemsFromDb() {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("StudyBox");
         EntityManager em = emf.createEntityManager();
 
