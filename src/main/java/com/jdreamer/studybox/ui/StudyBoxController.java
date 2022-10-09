@@ -9,20 +9,16 @@ import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
 import com.jdreamer.studybox.dao.StudyItemRepository;
 import com.jdreamer.studybox.dao.StudyItemRepositoryImpl;
 import com.jdreamer.studybox.model.StudyItem;
-import com.opencsv.CSVParser;
-import com.opencsv.CSVParserBuilder;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVReaderBuilder;
+import com.opencsv.*;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -30,16 +26,14 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import org.apache.commons.io.IOUtils;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.util.*;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -75,7 +69,7 @@ public class StudyBoxController {
     private Button playButton;
 
     @FXML
-    private Button updateStudyItem;
+    private Button downloadButton;
 
     private MediaPlayer mediaPlayer;
 
@@ -100,68 +94,90 @@ public class StudyBoxController {
         checkedIcon = new Image(getClass().getClassLoader().getResourceAsStream("checked.png"));
         uncheckedIcon = new Image(getClass().getClassLoader().getResourceAsStream("unchecked.png"));
 
+        Image downloadIcon = new Image(getClass().getClassLoader().getResourceAsStream("download.png"));
+
         studyItemsTree.setRoot(createNodes(this.studyItems));
         studyItemsTree.addEventHandler(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
         studyItemsTree.setShowRoot(false);
 
-        updateStudyItem.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent e) {
-                if (currentTreeItem != null) {
-                    StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
+        studyItemTitle.setOnAction(event -> {
+            if (currentTreeItem != null) {
+                StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
 
-                    currentStudyItem.setTitle(studyItemTitle.getText());
-                    currentStudyItem.setViewed(toggleIsViewed.isSelected());
+                currentStudyItem.setTitle(studyItemTitle.getText());
+                saveUpdatedStudyItem(currentStudyItem);
+            }
+        });
 
-                    saveUpdatedStudyItem(currentStudyItem);
+        studyItemTitle.setOnKeyReleased(t -> {
+            if (t.getCode() == KeyCode.ESCAPE) {
+                studyItemTitle.cancelEdit();
+                t.consume();
+            }
+        });
 
-                    currentTreeItem.setGraphic(new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon));
+        toggleIsViewed.setOnAction(e -> {
+            if (currentTreeItem != null) {
+                StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
+                currentStudyItem.setViewed(toggleIsViewed.isSelected());
+                saveUpdatedStudyItem(currentStudyItem);
+
+                currentTreeItem.setGraphic(new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon));
+            }
+        });
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save");
+        fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+
+        downloadButton.setOnAction(e -> {
+            if (!studyItems.isEmpty()) {
+                File outputFile = fileChooser.showSaveDialog(null);
+                if (outputFile != null) {
+                    downloadToLocal(outputFile);
                 }
             }
         });
+
+        downloadButton.setGraphic(new ImageView(downloadIcon));
 
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
 
-        playButton.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent e) {
-                if (mediaPlayer == null) {
-                    return;
-                }
+        playButton.setOnAction(e -> {
+            if (mediaPlayer == null) {
+                return;
+            }
 
-                MediaPlayer.Status status = mediaPlayer.getStatus();
-                if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
-                    // don't do anything in these states
-                    return;
-                }
+            MediaPlayer.Status status = mediaPlayer.getStatus();
+            if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
+                // don't do anything in these states
+                return;
+            }
 
-                if (status == MediaPlayer.Status.PAUSED
-                        || status == MediaPlayer.Status.READY
-                        || status == MediaPlayer.Status.STOPPED) {
-                    // rewind the movie if we're sitting at the end
-                    if (atEndOfMedia) {
-                        mediaPlayer.seek(mediaPlayer.getStartTime());
-                        atEndOfMedia = false;
-                    }
-                    mediaPlayer.play();
-                } else {
-                    mediaPlayer.pause();
+            if (status == MediaPlayer.Status.PAUSED
+                    || status == MediaPlayer.Status.READY
+                    || status == MediaPlayer.Status.STOPPED) {
+                // rewind the movie if we're sitting at the end
+                if (atEndOfMedia) {
+                    mediaPlayer.seek(mediaPlayer.getStartTime());
+                    atEndOfMedia = false;
                 }
+                mediaPlayer.play();
+            } else {
+                mediaPlayer.pause();
             }
         });
 
-        timeSlider.valueProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                if (timeSlider.isValueChanging() && mediaPlayer != null) {
-                    // multiply duration by percentage calculated by slider position
-                    mediaPlayer.seek(duration.multiply(timeSlider.getValue() / 100.0));
-                }
+        timeSlider.valueProperty().addListener(ov -> {
+            if (timeSlider.isValueChanging() && mediaPlayer != null) {
+                // multiply duration by percentage calculated by slider position
+                mediaPlayer.seek(duration.multiply(timeSlider.getValue() / 100.0));
             }
         });
 
-        volumeSlider.valueProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                if (volumeSlider.isValueChanging() && mediaPlayer != null) {
-                    mediaPlayer.setVolume(volumeSlider.getValue() / 100.0);
-                }
+        volumeSlider.valueProperty().addListener(ov -> {
+            if (volumeSlider.isValueChanging() && mediaPlayer != null) {
+                mediaPlayer.setVolume(volumeSlider.getValue() / 100.0);
             }
         });
     }
@@ -177,7 +193,7 @@ public class StudyBoxController {
                 StudyItem studyItem = (StudyItem) selectedItem.getValue();
 
                 if (studyItem.getMediaLocation() != null && (currentTreeItem == null || !studyItem.getMediaLocation().equals(
-                            ((StudyItem) currentTreeItem.getValue()).getMediaLocation()))) {
+                        ((StudyItem) currentTreeItem.getValue()).getMediaLocation()))) {
                     currentTreeItem = selectedItem;
 
                     StudyItem currentStudyItem = (StudyItem) currentTreeItem.getValue();
@@ -297,8 +313,6 @@ public class StudyBoxController {
     }
 
     private TreeItem<StudyItem> createNodes(List<StudyItem> studyItemList) {
-
-
         TreeItem<StudyItem> top = new TreeItem<StudyItem>(new StudyItem("My Study Items"));
 
         Map<String, List<StudyItem>> groupedStudyItem = studyItemList.stream().collect(groupingBy(StudyItem::getCategory));
@@ -313,7 +327,7 @@ public class StudyBoxController {
 
             for (StudyItem item : groupedStudyItem.get(key)) {
                 category.getChildren().add(new TreeItem<StudyItem>(item,
-                        new ImageView(toggleIsViewed.isSelected() ? checkedIcon : uncheckedIcon)));
+                        new ImageView(item.isViewed() ? checkedIcon : uncheckedIcon)));
             }
         }
 
@@ -376,6 +390,9 @@ public class StudyBoxController {
                 if (row.length > 3) {
                     item.setLocalMediaLocation(row[3]);
                 }
+                if (row.length > 4) {
+                    item.setViewed(Boolean.parseBoolean(row[4]));
+                }
                 list.add(item);
             }
         } catch (Exception e) {
@@ -402,6 +419,21 @@ public class StudyBoxController {
         emf.close();
 
         return studyItems;
+    }
+
+    private void downloadToLocal(File outputFile) {
+        try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
+            for (StudyItem item : studyItems) {
+                writer.writeNext(new String[]{
+                        item.getCategory(),
+                        item.getTitle(),
+                        item.getMediaLocation(),
+                        item.getLocalMediaLocation(),
+                        Boolean.toString(item.isViewed())});
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private StudyItem saveUpdatedStudyItem(StudyItem item) {
