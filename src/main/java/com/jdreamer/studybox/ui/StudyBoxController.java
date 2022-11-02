@@ -215,9 +215,14 @@ public class StudyBoxController {
                     VideoInfo video = response.data(); // will block thread
 
                     Optional<VideoFormat> videoFormat = null;
-                    if (video.bestVideoFormat().width() >= 720) {
+                    if (video.bestVideoFormat().width() > video.bestVideoFormat().height()
+                            && video.bestVideoFormat().width() >= 720) {
                         videoFormat = video.videoFormats().stream()
                                 .filter(format -> format.videoQuality() == VideoQuality.hd720).findFirst();
+                    } else if (video.bestVideoFormat().height() >= 720) {
+                        videoFormat = video.videoFormats().stream()
+                                .filter(format -> format.height() <= 720)
+                                .max(Comparator.comparingInt(VideoFormat::width));
                     } else {
                         videoFormat = Optional.of(video.bestVideoWithAudioFormat());
                     }
