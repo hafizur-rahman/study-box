@@ -22,7 +22,7 @@ for item in lists:
     for url in p.video_urls:
         yt = YouTube(url)
 
-        data.append((item[0], yt.title, url))
+        data.append((item[0], yt.title, url, '', False))
     
 import pandas as pd
 
