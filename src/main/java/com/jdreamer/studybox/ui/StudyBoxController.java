@@ -9,7 +9,7 @@ import com.github.kiulian.downloader.model.videos.quality.VideoQuality;
 import com.jdreamer.studybox.dao.StudyItemRepository;
 import com.jdreamer.studybox.dao.StudyItemRepositoryImpl;
 import com.jdreamer.studybox.model.StudyItem;
-import com.opencsv.*;
+
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -28,7 +28,10 @@ import javafx.scene.media.MediaView;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -383,28 +386,28 @@ public class StudyBoxController {
                 filereader = new InputStreamReader(new FileInputStream(studyItemsFile));
             }
 
-            CSVParser parser = new CSVParserBuilder().withSeparator(',').build();
-            CSVReader csvReader = new CSVReaderBuilder(filereader)
-                    .withCSVParser(parser)
-                    .build();
+            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withHeader().parse(filereader);
+            for (CSVRecord record : records) {
+                //Category,Title,MediaLocation,LocalMediaLocation,IsViewed
+                String category = record.get("Category");
+                String title = record.get("Title");
+                String mediaLocation = record.get("MediaLocation");
+                String localMediaLocation = record.get("LocalMediaLocation");
+                String isViewed = record.get("IsViewed");
 
-            List<String[]> allData = csvReader.readAll();
+                StudyItem item = new StudyItem(category, title, mediaLocation);
+                item.setLocalMediaLocation(localMediaLocation);
+                item.setViewed(Boolean.parseBoolean(isViewed));
 
-            for (String[] row : allData) {
-                StudyItem item = new StudyItem(row[0], row[1], row[2]);
-                if (row.length > 3) {
-                    item.setLocalMediaLocation(row[3]);
-                }
-                if (row.length > 4) {
-                    item.setViewed(Boolean.parseBoolean(row[4]));
-                }
                 list.add(item);
             }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
-                IOUtils.close(filereader);
+                if (filereader != null) {
+                    filereader.close();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -427,9 +430,10 @@ public class StudyBoxController {
     }
 
     private void downloadToLocal(File outputFile) {
-        try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
+        try (CSVPrinter writer = new CSVPrinter(new FileWriter(outputFile), CSVFormat.EXCEL)) {
+            writer.printRecord("Category,Title,MediaLocation,LocalMediaLocation,IsViewed".split(","));
             for (StudyItem item : studyItems) {
-                writer.writeNext(new String[]{
+                writer.printRecord(new String[]{
                         item.getCategory(),
                         item.getTitle(),
                         item.getMediaLocation(),
